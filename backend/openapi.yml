@@ -1,0 +1,321 @@
+openapi: 3.0.1
+info:
+  title: expenses-app-api
+  version: 0.3.0
+  description: "<p>OpenAPI spec for the expensify app</p>"
+  termsOfService: "http://${api_domain_name}/tos"
+  contact:
+    email: "admin@${root_domain_name}"
+servers:
+- url: http://${api_domain_name}
+  variables:
+    basePath:
+      default: /v1
+x-amazon-apigateway-request-validators:
+  basic:
+    validateRequestBody: true
+    validateRequestParameters: true
+x-amazon-apigateway-request-validator: basic
+x-amazon-apigateway-gateway-responses:
+  DEFAULT_4XX:
+    responseParameters:
+      gatewayresponse.header.Access-Control-Max-Age: "'7200'"
+      gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+  DEFAULT_5XX:
+    responseParameters:
+      gatewayresponse.header.Access-Control-Max-Age: "'7200'"
+      gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+paths:
+  /expenses:
+    get:
+      operationId: getExpenses
+      description: Get all expenses
+      security:
+      - expensify-CognitoUserPoolAuthorizer: []
+      responses:
+        200:
+          $ref: '#/components/responses/expenses'
+        500:
+          $ref: '#/components/responses/5XXAPIError'
+      tags:
+        - Expenses
+      x-amazon-apigateway-integration:
+        type: "aws"
+        uri: ${get_expenses_invoke_arn}
+        credentials: ${invoke_expenses_lambda_role_arn}
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_templates"
+        requestTemplates:
+          application/json: >-
+            {
+              "sub" : "$context.authorizer.claims.sub",
+              "email" : "$context.authorizer.claims.email"
+            }        
+        timeoutInMillis: 29000
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: >- 
+                  $input.path('$')
+          (\n|.)+: # errorMessage is non-zero (newline called out .\ doesn't match \n)
+            statusCode: "500"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: >- 
+                #set ($errorMessageObj = $input.path('$.errorMessage'))
+                {
+                  "errorMessage" : "$errorMessageObj"
+                }  
+    options:
+      responses:
+        200:
+          $ref: '#/components/responses/cors'
+        400:
+          $ref: '#/components/responses/cors'
+        500:
+          $ref: '#/components/responses/cors'
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "mock"
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Max-Age: "'7200'"
+              method.response.header.Access-Control-Allow-Methods: "'GET'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+  /expenses/{expenseID}:
+    put:
+      operationId: putExpense
+      description: Add or update an expense
+      security:
+      - expensify-CognitoUserPoolAuthorizer: []
+      parameters:
+       - $ref: '#/components/parameters/expenseID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Expense'
+      responses:
+        200:
+          $ref: '#/components/responses/empty'
+        400:
+          $ref: '#/components/responses/4XXClientError'
+        500:
+          $ref: '#/components/responses/5XXAPIError'
+      tags:
+        - Expenses
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        type: "mock"
+        passthroughBehavior: "when_no_templates"
+        timeoutInMillis: 29000
+        responses:
+          2\d{2}:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+    delete:
+      operationId: deleteExpense
+      description: Delete an expense
+      security:
+      - expensify-CognitoUserPoolAuthorizer: []
+      parameters:
+       - $ref: '#/components/parameters/expenseID'
+      responses:
+        200:
+          $ref: '#/components/responses/empty'
+        400:
+          $ref: '#/components/responses/4XXClientError'
+        500:
+          $ref: '#/components/responses/5XXAPIError'
+      tags:
+        - Expenses
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        type: "mock"
+        passthroughBehavior: "when_no_templates"
+        timeoutInMillis: 29000
+        responses:
+          2\d{2}:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+    options:
+      responses:
+        200:
+          $ref: '#/components/responses/cors'
+        400:
+          $ref: '#/components/responses/cors'
+        500:
+          $ref: '#/components/responses/cors'
+      x-amazon-apigateway-integration:
+        requestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        type: "mock"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Max-Age: "'7200'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,DELETE'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+components:
+  parameters:
+    expenseID:
+      description: Expense identifier
+      in: path
+      name: expenseID
+      schema:
+        type: string
+      required: true
+    correlationIdHeader:
+      description: Unique string that can trace execution across services
+      in: header
+      name: x-correlation-id
+      schema:
+        type: string
+      required: true
+    debugHeader:
+      description: Force debug level for this execution run
+      in: header
+      name: x-debug-level
+      schema:
+        type: string
+        enum: [error, debug, info]  
+      required: false
+  schemas:
+    Expenses:
+      type: object
+      title: Expenses
+      required:
+        - expenses
+      properties:
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+    Expense:
+      type: object
+      title: Expense
+      required:
+        - description
+        - amount
+        - createdAt
+      properties:
+        id: 
+          type: string
+          example: "7a9be277-c0d0-496c-aa51-93eb2c35792e"
+        description:
+          type: string
+          example: "Water Bill"
+        note:
+          type: string
+          example: "The first payment to the new provider"
+        amount:
+          type: integer
+          example: "12000"
+        createdAt:
+          type: integer
+          example: "1594489298"
+    Empty:
+      title: "Empty Schema"
+      type: "object"
+  responses:
+    4XXClientError:
+      description: The specified resource was not found.
+      headers:
+        Access-Control-Allow-Origin:
+          schema:
+            type: "string"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errorMessage:
+                type: string
+                example: Client Error
+    5XXAPIError:
+      description: Unexpected error
+      headers:
+        Access-Control-Allow-Origin:
+          schema:
+            type: "string"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errorMessage:
+                type: string
+                example: System Error
+    expenses:
+      description: Expenses
+      headers:
+        Access-Control-Allow-Origin:
+          schema:
+            type: "string"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Expenses'
+    empty:
+      description: Empty reponse
+      headers:
+        Access-Control-Allow-Origin:
+          schema:
+            type: "string"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Empty"
+    cors:
+      description: "200 response"
+      headers:
+        Access-Control-Allow-Origin:
+          schema:
+            type: "string"
+        Access-Control-Allow-Methods:
+          schema:
+            type: "string"
+        Access-Control-Max-Age:
+          schema:
+            type: "string"
+        Access-Control-Allow-Headers:
+          schema:
+            type: "string"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Empty"
+  securitySchemes:
+    expensify-CognitoUserPoolAuthorizer:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "cognito_user_pools"
+      x-amazon-apigateway-authorizer:
+        providerARNs:
+        - "${cognito_user_pool_arn}"
+        type: "cognito_user_pools"
+tags:
+  - name: Expense
+    description: Expense data
