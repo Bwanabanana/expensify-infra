@@ -44,6 +44,7 @@ resource "aws_api_gateway_domain_name" "app_api" {
   endpoint_configuration {
     types = ["REGIONAL"]
   }
+  depends_on = [aws_acm_certificate_validation.api_certificate_validation]
 }
 
 resource "aws_route53_record" "api_record" {
