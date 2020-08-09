@@ -66,3 +66,32 @@ data "aws_iam_policy_document" "write_to_cloudwatch" {
   }
 }
 
+resource "aws_iam_role_policy_attachment" "attach_dynamodb_policy" {
+  role       = aws_iam_role.expenses_lambda_role.name
+  policy_arn = aws_iam_policy.access_dynamo.arn
+}
+
+resource "aws_iam_policy" "access_dynamo" {
+  name        = "lambda_access_dynamo"
+  description = "Allows access to dynamodb app user data table"
+  policy      = data.aws_iam_policy_document.access_dynamo.json
+}
+
+data "aws_iam_policy_document" "access_dynamo" {
+  statement {
+    actions = [
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:UpdateItem"
+    ]
+
+    effect = "Allow"
+
+    resources = [
+      aws_dynamodb_table.user_data_table.arn
+    ]
+  }
+}
