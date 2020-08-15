@@ -19,6 +19,9 @@ data "template_file" "app_oapi_template" {
     api_domain_name                 = local.api_domain_name
     cognito_user_pool_arn           = aws_cognito_user_pool.pool.arn
     get_expenses_invoke_arn         = aws_lambda_function.get_expenses.invoke_arn
+    add_expense_invoke_arn          = aws_lambda_function.add_expense.invoke_arn
+    update_expense_invoke_arn       = aws_lambda_function.update_expense.invoke_arn
+    delete_expense_invoke_arn       = aws_lambda_function.delete_expense.invoke_arn
     invoke_expenses_lambda_role_arn = aws_iam_role.gateway_invoke_app.arn
   }
 }
@@ -26,6 +29,14 @@ data "template_file" "app_oapi_template" {
 resource "aws_api_gateway_deployment" "app_api" {
   rest_api_id = aws_api_gateway_rest_api.app_api.id
   stage_name  = "live"
+
+  triggers = {
+    redeployment = sha1(data.template_file.app_oapi_template.rendered)
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 #
@@ -143,7 +154,10 @@ data "aws_iam_policy_document" "invoke_app" {
       "lambda:InvokeFunction"
     ]
     resources = [
-      aws_lambda_function.get_expenses.arn
+      aws_lambda_function.get_expenses.arn,
+      aws_lambda_function.add_expense.arn,
+      aws_lambda_function.update_expense.arn,
+      aws_lambda_function.delete_expense.arn
     ]
   }
 }

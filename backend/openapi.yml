@@ -72,6 +72,57 @@ paths:
                 {
                   "errorMessage" : "$errorMessageObj"
                 }  
+    post:
+      operationId: addExpense
+      description: Add an expense
+      security:
+      - expensify-CognitoUserPoolAuthorizer: [] 
+      responses:
+        200:
+          $ref: '#/components/responses/empty'
+        400:
+          $ref: '#/components/responses/4XXClientError'
+        500:
+          $ref: '#/components/responses/5XXAPIError'
+      tags:
+        - Expenses
+      x-amazon-apigateway-integration:
+        type: "aws"
+        uri: ${add_expense_invoke_arn}
+        credentials: ${invoke_expenses_lambda_role_arn}
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_templates"
+        requestTemplates:
+          application/json: >-
+            {
+              "sub"     : "$context.authorizer.claims.sub",
+              "email"   : "$context.authorizer.claims.email",
+              "expense" : {
+                "description" : "$input.path('$.description')",
+                "note"        : "$input.path('$.note')",
+                "amount"      : "$input.path('$.amount')",
+                "createdAt"   : "$input.path('$.createdAt')"
+              }
+            }        
+        timeoutInMillis: 29000
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: >- 
+                $input.path('$')
+          (\n|.)+: # errorMessage is non-zero (newline called out .\ doesn't match \n)
+            statusCode: "500"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: >- 
+                #set ($errorMessageObj = $input.path('$.errorMessage'))
+                {
+                  "errorMessage" : "$errorMessageObj"
+                }  
     options:
       responses:
         200:
@@ -94,20 +145,14 @@ paths:
               method.response.header.Access-Control-Allow-Methods: "'GET'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
               method.response.header.Access-Control-Allow-Origin: "'*'"
-  /expenses/{expenseID}:
+  /expenses/{expenseId}:
     put:
-      operationId: putExpense
-      description: Add or update an expense
+      operationId: updateExpense
+      description: Update an expense
       security:
-      - expensify-CognitoUserPoolAuthorizer: []
+      - expensify-CognitoUserPoolAuthorizer: [] 
       parameters:
-       - $ref: '#/components/parameters/expenseID'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Expense'
+       - $ref: '#/components/parameters/expenseId'
       responses:
         200:
           $ref: '#/components/responses/empty'
@@ -118,23 +163,49 @@ paths:
       tags:
         - Expenses
       x-amazon-apigateway-integration:
-        requestTemplates:
-          application/json: "{ \"statusCode\": 200 }"
-        type: "mock"
+        type: "aws"
+        uri: ${update_expense_invoke_arn}
+        credentials: ${invoke_expenses_lambda_role_arn}
+        httpMethod: "POST"
         passthroughBehavior: "when_no_templates"
+        requestParameters:
+            integration.request.path.expenseId : method.request.path.expenseId
+        requestTemplates:
+          application/json: >-
+            {
+              "sub" : "$context.authorizer.claims.sub",
+              "email" : "$context.authorizer.claims.email",
+              "expense" : {
+                "id"          : "$input.params('expenseId')",
+                "description" : "$input.path('$.description')",
+                "note"        : "$input.path('$.note')",
+                "amount"      : "$input.path('$.amount')",
+                "createdAt"   : "$input.path('$.createdAt')"
+              }
+            }        
         timeoutInMillis: 29000
         responses:
-          2\d{2}:
+          default:
             statusCode: "200"
             responseParameters:
               method.response.header.Access-Control-Allow-Origin: "'*'"
+          (\n|.)+: # errorMessage is non-zero (newline called out .\ doesn't match \n)
+            statusCode: "500"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: >- 
+                #set ($errorMessageObj = $input.path('$.errorMessage'))
+                {
+                  "errorMessage" : "$errorMessageObj"
+                }  
     delete:
       operationId: deleteExpense
       description: Delete an expense
       security:
-      - expensify-CognitoUserPoolAuthorizer: []
+      - expensify-CognitoUserPoolAuthorizer: [] 
       parameters:
-       - $ref: '#/components/parameters/expenseID'
+       - $ref: '#/components/parameters/expenseId'
       responses:
         200:
           $ref: '#/components/responses/empty'
@@ -145,16 +216,36 @@ paths:
       tags:
         - Expenses
       x-amazon-apigateway-integration:
-        requestTemplates:
-          application/json: "{ \"statusCode\": 200 }"
-        type: "mock"
+        type: "aws"
+        uri: ${delete_expense_invoke_arn}
+        credentials: ${invoke_expenses_lambda_role_arn}
+        httpMethod: "POST"
         passthroughBehavior: "when_no_templates"
+        requestParameters:
+            integration.request.path.expenseId : method.request.path.expenseId
+        requestTemplates:
+          application/json: >-
+            {
+              "sub" : "$context.authorizer.claims.sub",
+              "email" : "$context.authorizer.claims.email",
+              "expenseId" : "$input.params('expenseId')"
+            }        
         timeoutInMillis: 29000
         responses:
-          2\d{2}:
+          default:
             statusCode: "200"
             responseParameters:
               method.response.header.Access-Control-Allow-Origin: "'*'"
+          (\n|.)+: # errorMessage is non-zero (newline called out .\ doesn't match \n)
+            statusCode: "500"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: >- 
+                #set ($errorMessageObj = $input.path('$.errorMessage'))
+                {
+                  "errorMessage" : "$errorMessageObj"
+                }  
     options:
       responses:
         200:
@@ -179,10 +270,10 @@ paths:
               method.response.header.Access-Control-Allow-Origin: "'*'"
 components:
   parameters:
-    expenseID:
+    expenseId:
       description: Expense identifier
       in: path
-      name: expenseID
+      name: expenseId
       schema:
         type: string
       required: true

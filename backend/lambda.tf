@@ -1,6 +1,6 @@
 
 #
-# Lambda
+# Lambdas
 #
 resource "aws_lambda_function" "get_expenses" {
   filename         = "../../expensify-backend-app/dist/expenses.zip"
@@ -8,6 +8,42 @@ resource "aws_lambda_function" "get_expenses" {
 
   function_name = "get-expenses"
   handler       = "./src/handlers/expense/get-expenses.handler"
+
+  role = aws_iam_role.expenses_lambda_role.arn
+
+  runtime = "nodejs12.x"
+}
+
+resource "aws_lambda_function" "add_expense" {
+  filename         = "../../expensify-backend-app/dist/expenses.zip"
+  source_code_hash = filebase64sha256("../../expensify-backend-app/dist/expenses.zip")
+
+  function_name = "add-expense"
+  handler       = "./src/handlers/expense/add-expense.handler"
+
+  role = aws_iam_role.expenses_lambda_role.arn
+
+  runtime = "nodejs12.x"
+}
+
+resource "aws_lambda_function" "update_expense" {
+  filename         = "../../expensify-backend-app/dist/expenses.zip"
+  source_code_hash = filebase64sha256("../../expensify-backend-app/dist/expenses.zip")
+
+  function_name = "update-expense"
+  handler       = "./src/handlers/expense/update-expense.handler"
+
+  role = aws_iam_role.expenses_lambda_role.arn
+
+  runtime = "nodejs12.x"
+}
+
+resource "aws_lambda_function" "delete_expense" {
+  filename         = "../../expensify-backend-app/dist/expenses.zip"
+  source_code_hash = filebase64sha256("../../expensify-backend-app/dist/expenses.zip")
+
+  function_name = "delete-expense"
+  handler       = "./src/handlers/expense/delete-expense.handler"
 
   role = aws_iam_role.expenses_lambda_role.arn
 
