@@ -3,7 +3,6 @@ info:
   title: expenses-app-api
   version: 0.3.0
   description: "<p>OpenAPI spec for the expensify app</p>"
-  termsOfService: "http://${api_domain_name}/tos"
   contact:
     email: "admin@${root_domain_name}"
 servers:
@@ -326,9 +325,6 @@ components:
         createdAt:
           type: integer
           example: "1594489298"
-    Empty:
-      title: "Empty Schema"
-      type: "object"
   responses:
     4XXClientError:
       description: The specified resource was not found.
@@ -374,10 +370,6 @@ components:
         Access-Control-Allow-Origin:
           schema:
             type: "string"
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Empty"
     cors:
       description: "200 response"
       headers:
@@ -407,6 +399,3 @@ components:
         providerARNs:
         - "${cognito_user_pool_arn}"
         type: "cognito_user_pools"
-tags:
-  - name: Expense
-    description: Expense data
